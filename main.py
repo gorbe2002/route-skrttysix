@@ -7,6 +7,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = pygame.image.load("graphics/player/f1car.png").convert_alpha()
+        self.image = pygame.transform.rotozoom(self.image, 0, 1.25)
         self.rect = self.image.get_rect(midbottom = (290,475))
 
     def player_input(self):
@@ -32,11 +33,11 @@ class Obstacle(pygame.sprite.Sprite):
 
         if self.side == "left":
             self.image = pygame.image.load("graphics/obstacles/yellowCar.png").convert_alpha()
-            self.image = pygame.transform.rotozoom(self.image, 0, 2)
+            self.image = pygame.transform.rotozoom(self.image, 0, 2.5)
             self.rect = self.image.get_rect(midtop = (choice([135,205]),-100))
         else:
             self.image = pygame.image.load("graphics/obstacles/purpleCar.png").convert_alpha()
-            self.image = pygame.transform.rotozoom(self.image, 0, 2)
+            self.image = pygame.transform.rotozoom(self.image, 0, 2.5)
             self.rect = self.image.get_rect(midtop = (choice([290,365]),-100))
 
     def apply_speed(self):
@@ -58,13 +59,19 @@ def display_score():
     screen.blit(score_surf, score_rect)
     return current_time
 
+def collision():
+    if pygame.sprite.spritecollide(player.sprite, obstacles, False):
+        obstacles.empty()
+        return False
+    else: return True
+
 # game setup
 pygame.init()
 screen = pygame.display.set_mode((500,500))
 pygame.display.set_caption("Route Skrtty-Six")
 clock = pygame.time.Clock()
 font = pygame.font.Font("graphics/SuperBoy.ttf", 30)
-game_active = True # change to False when intro screen is added
+game_active = False
 start_time = 0
 score = 0
 
@@ -76,6 +83,13 @@ obstacles = pygame.sprite.Group()
 
 # background
 background_surf = pygame.image.load("graphics/background.png").convert()
+
+# intro screen
+game_name = font.render("Route Skrtty-Six", True, "Black")
+game_name_rect = game_name.get_rect(center = (250,30))
+
+game_message = font.render("Press SPACE to play", True, "Black")
+game_message_rect = game_message.get_rect(center = (250,470))
 
 # timers
 left_obstacle_timer = pygame.USEREVENT + 1
@@ -92,12 +106,16 @@ while True:
             exit()
 
         if game_active:
-            # spawn vehicles
             if event.type == left_obstacle_timer: obstacles.add(Obstacle("left"))
             if event.type == right_obstacle_timer: obstacles.add(Obstacle("right"))
+        else:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                game_active = True
+                start_time = int(pygame.time.get_ticks()/1000)
+    
+    screen.blit(background_surf, (0,0))
 
     if game_active:
-        screen.blit(background_surf, (0,0))
         score = display_score()
 
         player.draw(screen)
@@ -105,6 +123,16 @@ while True:
 
         obstacles.draw(screen)
         obstacles.update()
+
+        game_active = collision()
+    else:
+        screen.blit(game_name, game_name_rect)
+        screen.blit(game_message, game_message_rect)
+        
+        score_message = font.render(f"Your Score: {score}", True, "Black")
+        score_message_rect = score_message.get_rect(center = (250,440))
+
+        if score != 0: screen.blit(score_message, score_message_rect)
 
     pygame.display.update()
     clock.tick(60)
