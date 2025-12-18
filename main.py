@@ -1,12 +1,13 @@
 import pygame
 from sys import exit
+from random import choice
 
 # classes
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = pygame.image.load("graphics/player/f1car.png").convert_alpha()
-        self.rect = self.image.get_rect(midbottom = (250,475))
+        self.rect = self.image.get_rect(midbottom = (290,475))
 
     def player_input(self):
         keys = pygame.key.get_pressed()
@@ -23,6 +24,31 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         self.player_input()
         self.apply_barriers()
+
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self, side):
+        super().__init__()
+        self.side = side
+
+        if self.side == "left":
+            self.image = pygame.image.load("graphics/obstacles/yellowCar.png").convert_alpha()
+            self.image = pygame.transform.rotozoom(self.image, 0, 2)
+            self.rect = self.image.get_rect(midtop = (choice([135,205]),-100))
+        else:
+            self.image = pygame.image.load("graphics/obstacles/purpleCar.png").convert_alpha()
+            self.image = pygame.transform.rotozoom(self.image, 0, 2)
+            self.rect = self.image.get_rect(midtop = (choice([290,365]),-100))
+
+    def apply_speed(self):
+        if self.side == "left": self.rect.top += 5
+        else: self.rect.top += 3
+
+    def destroy(self):
+        if self.rect.top > 600: self.kill()
+
+    def update(self):
+        self.apply_speed()
+        self.destroy()
 
 # helper functions
 def display_score():
@@ -42,12 +68,21 @@ game_active = True # change to False when intro screen is added
 start_time = 0
 score = 0
 
-# Groups
+# groups
 player = pygame.sprite.GroupSingle()
 player.add(Player())
 
-# Background
+obstacles = pygame.sprite.Group()
+
+# background
 background_surf = pygame.image.load("graphics/background.png").convert()
+
+# timers
+left_obstacle_timer = pygame.USEREVENT + 1
+pygame.time.set_timer(left_obstacle_timer, 2000)
+
+right_obstacle_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(right_obstacle_timer, 3000)
 
 # game logic
 while True:
@@ -56,12 +91,20 @@ while True:
             pygame.quit()
             exit()
 
+        if game_active:
+            # spawn vehicles
+            if event.type == left_obstacle_timer: obstacles.add(Obstacle("left"))
+            if event.type == right_obstacle_timer: obstacles.add(Obstacle("right"))
+
     if game_active:
         screen.blit(background_surf, (0,0))
         score = display_score()
 
         player.draw(screen)
         player.update()
+
+        obstacles.draw(screen)
+        obstacles.update()
 
     pygame.display.update()
     clock.tick(60)
